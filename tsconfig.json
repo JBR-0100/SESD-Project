@@ -9,7 +9,7 @@
     "module": "commonjs",
     "target": "es2020",
     "esModuleInterop": true,
-    "types": [],
+    "types": ["node"],
     // For nodejs:
     // "lib": ["esnext"],
     // "types": ["node"],
@@ -35,6 +35,7 @@
   },
   "exclude": [
     "node_modules",
-    "dist"
+    "dist",
+    "frontend"
   ]
 }
