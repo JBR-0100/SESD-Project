@@ -1,12 +1,12 @@
 import app from './app';
-import { PrismaClient } from '@prisma/client';
+import { PrismaService } from './infrastructure/PrismaService';
 import { Logger } from './infrastructure/Logger';
 import { bootstrapBackgroundServices } from './infrastructure/bootstrap';
 
 bootstrapBackgroundServices();
 
 const PORT = process.env.PORT || 3000;
-const prisma = new PrismaClient();
+const prisma = PrismaService.getInstance();
 
 const server = app.listen(PORT, () => {
     Logger.info(`Server is running on port ${PORT}`);
