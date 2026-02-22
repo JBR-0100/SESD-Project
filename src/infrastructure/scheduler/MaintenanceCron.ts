@@ -1,8 +1,8 @@
 import cron from 'node-cron';
-import { PrismaClient } from '@prisma/client';
+import { PrismaService } from '../PrismaService';
 import { Logger } from '../../infrastructure/Logger';
 
-const prisma = new PrismaClient();
+const prisma = PrismaService.getInstance();
 const MAINTENANCE_THRESHOLD_KM = 5000;
 
 /**

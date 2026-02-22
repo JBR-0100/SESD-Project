@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { PrismaService } from '../../../infrastructure/PrismaService';
 import { Logger } from '../../../infrastructure/Logger';
 
-const prisma = new PrismaClient();
+const prisma = PrismaService.getInstance();
 
 export class HealthController {
     async check(req: Request, res: Response) {
