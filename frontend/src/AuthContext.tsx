@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import api from './api';
+import axios from 'axios';
 
 interface User {
     email: string;
@@ -31,52 +33,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const login = async (email: string, password: string) => {
-        let res: Response;
         try {
-            res = await fetch('/api/v1/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
-            });
-        } catch {
+            const res = await api.post('/auth/login', { email, password });
+            const data = res.data;
+
+            localStorage.setItem('driveflow_token', data.token);
+            localStorage.setItem('driveflow_user', JSON.stringify(data.user));
+            setToken(data.token);
+            setUser(data.user);
+        } catch (error: any) {
+            if (axios.isAxiosError(error) && error.response) {
+                throw new Error(error.response.data.error || 'Login failed');
+            }
             throw new Error('Backend not reachable — run: npx ts-node src/server.ts');
         }
-
-        let data: any;
-        try {
-            data = await res.json();
-        } catch {
-            throw new Error('Backend returned empty response — is the server running?');
-        }
-
-        if (!res.ok) throw new Error(data.error || 'Login failed');
-
-        localStorage.setItem('driveflow_token', data.token);
-        localStorage.setItem('driveflow_user', JSON.stringify(data.user));
-        setToken(data.token);
-        setUser(data.user);
     };
 
     const register = async (email: string, password: string, firstName: string, lastName: string) => {
-        let res: Response;
         try {
-            res = await fetch('/api/v1/auth/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password, firstName, lastName }),
-            });
-        } catch {
+            await api.post('/auth/register', { email, password, firstName, lastName });
+        } catch (error: any) {
+            if (axios.isAxiosError(error) && error.response) {
+                throw new Error(error.response.data.error || 'Registration failed');
+            }
             throw new Error('Backend not reachable — run: npx ts-node src/server.ts');
         }
-
-        let data: any;
-        try {
-            data = await res.json();
-        } catch {
-            throw new Error('Backend returned empty response — is the server running?');
-        }
-
-        if (!res.ok) throw new Error(data.error || 'Registration failed');
     };
 
     const logout = () => {
