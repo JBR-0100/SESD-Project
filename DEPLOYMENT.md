@@ -1,55 +1,63 @@
 # Deployment Guide: DriveFlow Fleet Dashboard
 
-This guide explains how to host the backend on **Render** and the frontend on **Vercel**.
+This guide describes how to deploy the DriveFlow application using Render for the backend and Vercel for the frontend.
+
+## Prerequisites
+
+- Account on [Render](https://render.com)
+- Account on [Vercel](https://vercel.com)
+- GitHub repository containing the project code
 
 ## Phase 1: Backend Deployment (Render)
 
-### 1. Create a PostgreSQL Database
-1. Log in to [Render](https://dashboard.render.com/).
-2. Click **New** > **PostgreSQL**.
-3. **Name**: `driveflow-db`
-4. **Plan**: Free (Note: Expires after 30 days of inactivity).
-5. Click **Create Database**.
-6. **Copy the "External Database URL"** for later.
+### 1. Database Setup
+1. Log in to the Render Dashboard.
+2. Select New > PostgreSQL.
+3. Configure the database name and region.
+4. Once created, copy the External Database URL. You will need this for the DATABASE_URL environment variable.
 
-### 2. Create a Web Service
-1. Click **New** > **Web Service**.
+### 2. Web Service Setup
+1. Select New > Web Service.
 2. Connect your GitHub repository.
-3. **Name**: `driveflow-backend`
-4. **Environment**: `Node`
-5. **Build Command**: `npm install && npx prisma generate`
-6. **Start Command**: `npx ts-node src/server.ts`
-7. Click **Advanced** and add these **Environment Variables**:
-   - `DATABASE_URL`: (Paste your External Database URL from step 1)
-   - `JWT_SECRET`: (Any long random string)
-   - `PORT`: `3000`
-8. Click **Create Web Service**.
-9. **Wait for deployment** and copy the resulting URL (e.g., `https://driveflow-backend.onrender.com`).
-
----
+3. Configuration:
+   - Name: driveflow-backend
+   - Environment: Node
+   - Build Command: `npm install && npx prisma generate`
+   - Start Command: `npx ts-node src/server.ts`
+4. Advanced > Environment Variables:
+   - DATABASE_URL: (Use the URL from step 1. Note: Render usually requires appending `?sslmode=require` if not already present)
+   - JWT_SECRET: (A secure random string)
+   - PORT: 3000
+5. Click Create Web Service. Wait for the service to be live and copy the public URL (e.g., https://driveflow-backend.onrender.com).
 
 ## Phase 2: Frontend Deployment (Vercel)
 
-### 1. Create a New Project
-1. Log in to [Vercel](https://vercel.com/).
-2. Click **Add New** > **Project**.
-3. Import your GitHub repository.
-4. **Framework Preset**: Vite
-5. **Root Directory**: `frontend`
-6. Click **Environment Variables** and add:
-   - `VITE_API_URL`: (Paste your Render Backend URL + `/api/v1`, e.g., `https://driveflow-backend.onrender.com/api/v1`)
-7. Click **Deploy**.
+1. Log in to Vercel and select Add New > Project.
+2. Import your GitHub repository.
+3. Framework Preset: Vite.
+4. Root Directory: `frontend`.
+5. Environment Variables:
+   - VITE_API_URL: (The Render backend URL + /api/v1, e.g., https://driveflow-backend.onrender.com/api/v1)
+6. Click Deploy.
 
----
+## Phase 3: Database Synchronization
 
-## Phase 3: Final Identity & Database Push
+Once the backend is live, you must push the schema and seed the initial data to the remote database.
 
-1. Update your local `.env` file's `DATABASE_URL` with the **External Database URL** from Render.
-2. Run database migration to create tables in the Render DB:
+1. Update your local .env file with the remote DATABASE_URL from Render.
+2. Push the schema to the remote database:
    ```bash
    npx prisma db push
    ```
-3. Once the push is successful, your Vercel frontend should be able to communicate with the Render backend.
+3. Seed the lookup tables and initial test data:
+   ```bash
+   npx prisma db seed
+   ```
 
-> [!IMPORTANT]
-> **CORS**: The backend is currently configured with `app.use(cors())`, which allows all origins. This is fine for initial deployment but should be restricted to your Vercel domain later for security.
+## Infrastructure Notes
+
+### Prisma 7 Configuration
+The project uses Prisma 7, which requires a driver adapter for direct database connections. The configuration is managed in `prisma.config.ts`. Ensure that the `pg` and `@prisma/adapter-pg` dependencies are present in the environment.
+
+### Security
+The backend uses CORS middleware. For production, it is recommended to restrict the allowed origins to your Vercel domain in `src/app.ts`.

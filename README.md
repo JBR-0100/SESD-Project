@@ -1,234 +1,99 @@
-# 🚗 DriveFlow — Enterprise Car Rental System
+# DriveFlow - Enterprise Car Rental System
 
-> A production-grade car rental backend built with **TypeScript**, **Express**, and **Prisma**, demonstrating advanced OOP principles, GoF design patterns, and real-world system design.
+DriveFlow is a production-ready fleet management and car rental system. It is built using TypeScript, Express, and Prisma, and it demonstrates advanced object-oriented programming principles, design patterns, and scalable system architecture.
 
-DriveFlow manages fleet operations—from vehicle creation to contract lifecycle, automated maintenance, and background task processing—using a clean three-tier architecture with no shortcuts.
+The system handles the entire lifecycle of a rental fleet, from vehicle onboarding to automated maintenance scheduling and rental contract management.
 
----
+## Technical Stack
 
-## 📐 Design Patterns
+- Backend: Node.js, TypeScript, Express.js
+- Database: PostgreSQL with Prisma ORM (Version 7)
+- Frontend: React, Vite, Tailwind CSS
+- Patterns: State, Strategy, Factory, Singleton, Observer
+- Infrastructure: Winston Logging, node-cron, in-memory JobQueue
 
-### 🔄 State Pattern — Vehicle Lifecycle
+## Architecture and Design Patterns
 
-Traditional approach: a giant `if/else` on a `status` string. Our approach: each state is its own class implementing `VehicleState`.
+### State Pattern - Vehicle Lifecycle Management
+DriveFlow uses the State pattern to manage the transitions of a vehicle through various stages: Available, Reserved, Rented, Maintenance, and Retired. Each state is represented by its own class, ensuring that transition rules are encapsulated and easy to extend without modifying the core Vehicle entity.
 
-```
-AVAILABLE → RESERVED → RENTED → AVAILABLE
-                                    ↓
-                              MAINTENANCE → AVAILABLE / RETIRED
-```
+### Strategy Pattern - Pricing Engine
+The pricing logic is decoupled from the rental contract using the Strategy pattern. This allows the system to support multiple pricing models, such as standard rates, loyalty discounts, and seasonal surges, which can be swapped at runtime based on customer profiles or business rules.
 
-Each state **enforces its own transition rules**. Try to rent an already-rented vehicle? The `RentedState` class throws immediately—no centralized switch needed.
+### Factory Pattern - Vehicle Creation
+All vehicle instantiation is centralized through a Vehicle Factory. This abstraction ensures that complex validation and default configurations are applied consistently across different vehicle types (Cars, Trucks, Electric Vehicles).
 
-```typescript
-// The vehicle delegates behavior to its current state object
-vehicle.reserve();          // AvailableState → ReservedState ✅
-vehicle.reserve();          // RentedState → throws Error ❌
-```
+### Layered Architecture
+The project follows a strict three-tier architecture:
+- Interface Layer: Express routes, controllers, and middleware.
+- Application Layer: Service classes orchestrating domain logic and infrastructure.
+- Domain Layer: Pure business logic, entities, and design patterns.
+- Infrastructure Layer: Database repositories, event buses, and background workers.
 
-**Why?** Open/Closed Principle. Adding a new state (e.g., `DamagedState`) requires zero changes to existing code—just a new class.
+## Key Features
 
----
+### Concurrency Control
+The system implements optimistic locking using a version field in the database to prevent race conditions during rental bookings.
 
-### 💰 Strategy Pattern — Pricing Engine
+### Automated Maintenance
+A daily cron job monitors vehicle mileage and automatically transitions vehicles to a maintenance state when service thresholds are met, minimizing downtime and manual oversight.
 
-Pricing logic is **decoupled from the contract**. Swap strategies at runtime without touching the `RentalContract` class.
+### Background Task Processing
+The system offloads non-critical operations, such as email dispatch and insurance verification, to background workers. This is implemented via an internal EventBus and JobQueue, ensuring a fast and responsive API.
 
-| Strategy | Behavior |
-|---|---|
-| `StandardPricingStrategy` | `dailyRate × days` |
-| `LoyaltyPricingStrategy` | Applies tier-based discounts (Gold: 10%, Platinum: 15%) |
-| `SeasonalSurgePricingStrategy` | Dynamic multiplier for peak seasons |
+### Security and Validation
+- JWT-based authentication for secure session management.
+- Role-Based Access Control (RBAC) to distinguish between Customers and Fleet Managers.
+- Input validation using Zod for all API endpoints.
 
-```typescript
-const contract = new RentalContract(customer, vehicle, date, 7, insurance, new LoyaltyPricingStrategy());
-// Gold customer pays $451 instead of $490 — 10% saved
-```
+## Installation and Setup
 
-**Why?** Adding a "Corporate Fleet Discount" strategy requires zero changes to `RentalContract`.
+1. Install dependencies:
+   ```bash
+   npm install
+   cd frontend && npm install
+   ```
 
----
+2. Generate Prisma client:
+   ```bash
+   npx prisma generate
+   ```
 
-### 🏭 Factory Pattern — Vehicle Creation
+3. Configure environment:
+   Create a `.env` file in the root directory with the following variables:
+   - `DATABASE_URL`: Connection string for PostgreSQL.
+   - `JWT_SECRET`: Secure string for token signing.
+   - `PORT`: Server port (default 3000).
 
-All vehicle instantiation goes through `VehicleFactory.createVehicle()`. The caller never needs to know about `Car`, `Truck`, or `ElectricVehicle` constructors.
+4. Synchronize database:
+   ```bash
+   npx prisma db push
+   npx prisma db seed
+   ```
 
-```typescript
-const ev = VehicleFactory.createVehicle(VehicleType.ELECTRIC_VEHICLE, {
-    make: 'Tesla', model: 'Model 3', year: 2025,
-    licensePlate: 'DF-EV-001', dailyRate: 120,
-    batteryCapacityKwh: 75, rangeKm: 358, chargerType: 'Type 2',
-});
-```
+## Development Commands
 
-**Why?** Centralizes validation, enforces consistency, and makes subclass changes invisible to consuming code.
+- Start Backend: `npm run start`
+- Start Frontend: `cd frontend && npm run dev`
+- Run Seeding: `npx prisma db seed`
 
----
+## Test Accounts
 
-## 🏗️ System Architecture
+The following accounts are created by the seeding script for testing:
 
-DriveFlow follows a strict **three-tier / layered architecture**:
+- Fleet Manager: admin@driveflow.com (Password: password123)
+- Regular Customer: test@example.com (Password: password123)
 
-```
-┌──────────────────────────────────────────────────────┐
-│                  API / Interface Layer                │
-│   Routes → Controllers → Middleware (Auth, RBAC,     │
-│   Rate Limiting, Validation, Error Handling)          │
-├──────────────────────────────────────────────────────┤
-│                  Application Layer                    │
-│   RentalService, AuthService, MaintenanceService     │
-│   (Orchestrates domain objects + infrastructure)      │
-├──────────────────────────────────────────────────────┤
-│                    Domain Layer                       │
-│   Entities (Vehicle, Customer, RentalContract)       │
-│   Patterns (State, Strategy, Factory)                │
-│   Value Objects, Enums, Domain Errors                │
-├──────────────────────────────────────────────────────┤
-│                Infrastructure Layer                   │
-│   Prisma Repositories, Winston Logger, EventBus,     │
-│   JobQueue, CRON Scheduler, Background Workers       │
-└──────────────────────────────────────────────────────┘
-```
+## API Reference
 
-**Dependency Rule:** Each layer only depends on the layer below it. Domain has **zero** framework dependencies.
-
----
-
-## ⚡ Key Real-World Features
-
-### 🔒 Concurrency — Double-Booking Protection
-
-The State Pattern ensures a vehicle cannot be rented twice simultaneously. The `VehicleState` interface enforces valid transitions at the domain level, while optimistic locking (`version` field) protects against race conditions at the database level.
-
-### 🔧 Automated Maintenance Triggers
-
-A **CRON job** runs daily at midnight, scanning for vehicles where:
-
-```
-mileageKm > lastServiceMileage + 5,000
-```
-
-Matching vehicles are automatically transitioned to `MAINTENANCE` state—no human intervention required.
-
-### 📨 Background Task Processing
-
-Long-running operations are offloaded to an **in-memory job queue** (Observer Pattern):
-
-- **Customer Registration** → Welcome email (background)
-- **Rental Creation** → PDF receipt + Insurance verification (background)
-- Event-driven via `EventBus` pub/sub
-
-### 🛡️ Security & Identity
-
-- JWT-based authentication with bcrypt password hashing
-- Role-Based Access Control (RBAC): `CUSTOMER` vs `FLEET_MANAGER`
-- Rate limiting on sensitive endpoints
-
-### 📊 Observability
-
-- **Structured logging** via Winston (JSON + colored console)
-- **Global error handler** — domain errors map to HTTP status codes, stack traces hidden in production
-- **Health check** endpoint (`GET /health`) verifying database connectivity
-- **Graceful shutdown** with connection draining
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- **Node.js** ≥ 18
-- **npm** ≥ 9
-
-### Installation
-
-```bash
-git clone https://github.com/JBR-0100/project-223.git
-cd project-223
-npm install
-```
-
-### Database Setup
-
-```bash
-npx prisma migrate dev        # Apply migrations (SQLite — zero external deps)
-npx prisma generate           # Generate Prisma Client
-```
-
-### Run the Demo
-
-```bash
-# Full "Day in the Life" demo — exercises all 4 design patterns
-npx ts-node src/demo-dayinlife.ts
-
-# API verification (HTTP endpoints)
-npx ts-node src/demo-api.ts
-
-# Security demo (Auth, RBAC, Rate Limiting)
-npx ts-node src/demo-auth.ts
-
-# Background tasks demo (EventBus, CRON, Workers)
-npx ts-node src/demo-background.ts
-
-# Resilience demo (Health Check, Error Handling)
-npx ts-node src/demo-resilience.ts
-```
-
-### Start the Server
-
-```bash
-npx ts-node src/server.ts      # Runs on http://localhost:3000
-```
-
----
-
-## 📁 Project Structure
-
-```
-src/
-├── domain/                    # Pure business logic (no framework deps)
-│   ├── entities/              # Vehicle, Customer, RentalContract, InsurancePolicy
-│   ├── factories/             # VehicleFactory
-│   ├── patterns/
-│   │   ├── state/             # Available, Reserved, Rented, Maintenance, Retired
-│   │   └── strategy/          # Standard, Loyalty, SeasonalSurge pricing
-│   ├── errors/                # AppError, VehicleNotAvailableError
-│   └── types/                 # Enums (VehicleType, LoyaltyTier, etc.)
-├── application/               # Service orchestration
-│   └── services/              # RentalService, AuthService, MaintenanceService
-├── infrastructure/            # External concerns
-│   ├── repositories/          # Prisma-backed persistence
-│   ├── events/                # EventBus (Observer Pattern)
-│   ├── queue/                 # In-memory JobQueue
-│   ├── scheduler/             # CRON maintenance checker
-│   ├── workers/               # Background job handlers
-│   ├── Logger.ts              # Winston structured logging
-│   └── bootstrap.ts           # Wires queues, events, CRON on startup
-├── interface/http/            # Express API layer
-│   ├── controllers/           # Request handlers
-│   ├── middleware/             # Auth, RBAC, Rate Limit, Error Handler
-│   ├── routes/                # Route definitions
-│   └── schemas/               # Zod validation schemas
-└── server.ts                  # Entry point with graceful shutdown
-```
-
----
-
-## 🧪 API Endpoints
-
-| Method | Endpoint | Auth | Description |
+| Method | Endpoint | Access | Description |
 |---|---|---|---|
-| `POST` | `/api/v1/auth/register` | — | Register a new customer |
-| `POST` | `/api/v1/auth/login` | — | Login and receive JWT |
-| `GET` | `/api/v1/vehicles` | 🔑 | List all vehicles |
-| `POST` | `/api/v1/vehicles` | 🔑👔 | Add a vehicle (Fleet Manager) |
-| `POST` | `/api/v1/rentals` | 🔑 | Create a rental contract |
-| `GET` | `/api/v1/health` | — | Service health check |
+| POST | /api/v1/auth/register | Public | Register a new account |
+| POST | /api/v1/auth/login | Public | Obtain authentication token |
+| GET | /api/v1/vehicles | Authorized | List available fleet |
+| POST | /api/v1/vehicles | Manager | Add new vehicle |
+| POST | /api/v1/rentals | Authorized | Create rental contract |
+| GET | /api/v1/health | Public | System health check |
 
-🔑 = Requires JWT &nbsp; 👔 = Fleet Manager role only
-
----
-
-## 📝 License
-
+## License
 ISC
