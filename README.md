@@ -1,99 +1,85 @@
 # DriveFlow - Enterprise Car Rental System
 
-DriveFlow is a production-ready fleet management and car rental system. It is built using TypeScript, Express, and Prisma, and it demonstrates advanced object-oriented programming principles, design patterns, and scalable system architecture.
+DriveFlow is a production-grade car rental and fleet management system. It is built with TypeScript and Express, using a strong Object-Oriented Programming (OOP) foundation to ensure the code is clean, stable, and easy to grow.
 
-The system handles the entire lifecycle of a rental fleet, from vehicle onboarding to automated maintenance scheduling and rental contract management.
+By following professional design patterns, the system avoids complex "if/else" logic and instead uses dedicated classes to handle different parts of the rental lifecycle.
+
+## Strong OOP Foundation
+
+The project is built around three core design patterns that make the codebase easy to maintain:
+
+- **State Pattern**: We use this to manage vehicle status (Available, Rented, Maintenance). Instead of checking strings, each state is its own class. If a vehicle is in the "Rented" state, it automatically knows it cannot be rented again. Adding a new state (like "Damaged") is as simple as adding one new class.
+- **Strategy Pattern**: This handles our pricing. Whether it's a standard rate, a loyalty discount, or a seasonal surge, the system can swap pricing rules at runtime without changing the main contract code.
+- **Factory Pattern**: We use a factory to create vehicles. This ensures that every car, truck, or electric vehicle is initialized correctly with all its specific data (like battery capacity for EVs) in one centralized place.
+
+## Project Structure
+
+The codebase is organized into a clear three-tier architecture, separating the business logic from the technical infrastructure.
+
+```text
+src/
+├── domain/                # Core business logic (Pure OOP)
+│   ├── entities/          # Vehicle, Customer, RentalContract
+│   ├── patterns/          # State and Strategy implementations
+│   ├── factories/         # VehicleFactory
+│   └── errors/            # Custom domain-specific errors
+├── application/           # Orchestration layer
+│   └── services/          # RentalService, AuthService, Maintenance
+├── infrastructure/        # External systems (Database, Events)
+│   ├── repositories/      # Database access (Prisma)
+│   ├── scheduler/         # Automated maintenance jobs
+│   ├── events/            # In-memory communication (Observer)
+│   └── queue/             # Background task management
+├── interface/             # Web API layer (Express)
+│   ├── routes/            # API endpoints
+│   ├── controllers/       # Request handling and responses
+│   └── middleware/        # Security, Auth, and Error Handling
+└── server.ts              # System entry point
+```
 
 ## Technical Stack
 
-- Backend: Node.js, TypeScript, Express.js
-- Database: PostgreSQL with Prisma ORM (Version 7)
-- Frontend: React, Vite, Tailwind CSS
-- Patterns: State, Strategy, Factory, Singleton, Observer
-- Infrastructure: Winston Logging, node-cron, in-memory JobQueue
+- **Backend**: Node.js, TypeScript, Express.js
+- **Database**: PostgreSQL with Prisma ORM
+- **Frontend**: React, Vite, Tailwind CSS
+- **Tools**: node-cron (Scheduling), Winston (Logging)
 
-## Architecture and Design Patterns
+## Getting Started
 
-### State Pattern - Vehicle Lifecycle Management
-DriveFlow uses the State pattern to manage the transitions of a vehicle through various stages: Available, Reserved, Rented, Maintenance, and Retired. Each state is represented by its own class, ensuring that transition rules are encapsulated and easy to extend without modifying the core Vehicle entity.
-
-### Strategy Pattern - Pricing Engine
-The pricing logic is decoupled from the rental contract using the Strategy pattern. This allows the system to support multiple pricing models, such as standard rates, loyalty discounts, and seasonal surges, which can be swapped at runtime based on customer profiles or business rules.
-
-### Factory Pattern - Vehicle Creation
-All vehicle instantiation is centralized through a Vehicle Factory. This abstraction ensures that complex validation and default configurations are applied consistently across different vehicle types (Cars, Trucks, Electric Vehicles).
-
-### Layered Architecture
-The project follows a strict three-tier architecture:
-- Interface Layer: Express routes, controllers, and middleware.
-- Application Layer: Service classes orchestrating domain logic and infrastructure.
-- Domain Layer: Pure business logic, entities, and design patterns.
-- Infrastructure Layer: Database repositories, event buses, and background workers.
-
-## Key Features
-
-### Concurrency Control
-The system implements optimistic locking using a version field in the database to prevent race conditions during rental bookings.
-
-### Automated Maintenance
-A daily cron job monitors vehicle mileage and automatically transitions vehicles to a maintenance state when service thresholds are met, minimizing downtime and manual oversight.
-
-### Background Task Processing
-The system offloads non-critical operations, such as email dispatch and insurance verification, to background workers. This is implemented via an internal EventBus and JobQueue, ensuring a fast and responsive API.
-
-### Security and Validation
-- JWT-based authentication for secure session management.
-- Role-Based Access Control (RBAC) to distinguish between Customers and Fleet Managers.
-- Input validation using Zod for all API endpoints.
-
-## Installation and Setup
-
-1. Install dependencies:
+1. **Setup**:
    ```bash
    npm install
    cd frontend && npm install
    ```
-
-2. Generate Prisma client:
+2. **Database**:
+   Update `.env` with your `DATABASE_URL`, then run:
    ```bash
    npx prisma generate
-   ```
-
-3. Configure environment:
-   Create a `.env` file in the root directory with the following variables:
-   - `DATABASE_URL`: Connection string for PostgreSQL.
-   - `JWT_SECRET`: Secure string for token signing.
-   - `PORT`: Server port (default 3000).
-
-4. Synchronize database:
-   ```bash
    npx prisma db push
    npx prisma db seed
    ```
-
-## Development Commands
-
-- Start Backend: `npm run start`
-- Start Frontend: `cd frontend && npm run dev`
-- Run Seeding: `npx prisma db seed`
+3. **Run**:
+   ```bash
+   npm run start          # Backend (Port 3000)
+   cd frontend && npm run dev  # Frontend
+   ```
 
 ## Test Accounts
 
-The following accounts are created by the seeding script for testing:
+The following accounts are ready to use after running the seed script (Password: `password123`):
 
-- Fleet Manager: admin@driveflow.com (Password: password123)
-- Regular Customer: test@example.com (Password: password123)
+- **Fleet Manager**: admin@driveflow.com
+- **Regular Customer**: test@example.com
 
 ## API Reference
 
-| Method | Endpoint | Access | Description |
-|---|---|---|---|
-| POST | /api/v1/auth/register | Public | Register a new account |
-| POST | /api/v1/auth/login | Public | Obtain authentication token |
-| GET | /api/v1/vehicles | Authorized | List available fleet |
-| POST | /api/v1/vehicles | Manager | Add new vehicle |
-| POST | /api/v1/rentals | Authorized | Create rental contract |
-| GET | /api/v1/health | Public | System health check |
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | /api/v1/auth/login | Login and receive token |
+| GET | /api/v1/vehicles | List all fleet vehicles |
+| POST | /api/v1/vehicles | Add a new vehicle (Manager only) |
+| POST | /api/v1/rentals | Create a rental booking |
+| GET | /api/v1/health | Check system status |
 
 ## License
 ISC
