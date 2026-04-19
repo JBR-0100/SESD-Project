@@ -1,8 +1,8 @@
-*/node_modules
-dist
+node_modules/
+dist/
 .env
 prisma/dev.db
 prisma/dev.db-journal
 test.db
-*/scratch
-
+scratch/
+*.log
