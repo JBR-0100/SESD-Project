@@ -13,9 +13,10 @@ export class InsurancePolicy {
         tier: InsuranceTier,
         dailyPremium: number,
         deductible: number,
-        maxCoverage: number
+        maxCoverage: number,
+        policyId?: string
     ) {
-        this.policyId = uuidv4();
+        this.policyId = policyId || uuidv4();
         this.tier = tier;
         this.coverageDescription = `Coverage plan for ${tier} tier`;
         this.dailyPremium = dailyPremium;

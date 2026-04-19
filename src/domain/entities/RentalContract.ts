@@ -28,10 +28,13 @@ export class RentalContract {
         startDate: Date,
         days: number,
         insurance: InsurancePolicy,
-        strategy: PricingStrategy
+        strategy: PricingStrategy,
+        contractId?: string,
+        status?: ContractStatus,
+        totalAmount?: number
     ) {
-        this.contractId = uuidv4();
-        this.status = ContractStatus.DRAFT;
+        this.contractId = contractId || uuidv4();
+        this.status = status || ContractStatus.DRAFT;
         this.customer = customer;
         this.vehicle = vehicle;
         this.startDate = startDate;
@@ -42,7 +45,7 @@ export class RentalContract {
         this.actualReturnDate = null;
         this.basePrice = 0;
         this.insuranceTotal = 0;
-        this.totalAmount = 0;
+        this.totalAmount = totalAmount || 0;
     }
 
     // Getters for Persistence
@@ -72,7 +75,7 @@ export class RentalContract {
 
         this.CalculateEstimatedTotal();
         this.status = ContractStatus.CONFIRMED;
-        this.vehicle.reserve(); // Transition vehicle state
+        this.vehicle.reserve();
         Logger.info(`Contract ${this.contractId} confirmed. Estimated Total: $${this.totalAmount}`, { contractId: this.contractId, totalAmount: this.totalAmount });
     }
 
@@ -81,7 +84,7 @@ export class RentalContract {
             throw new Error('Contract must be confirmed before activating.');
         }
         this.status = ContractStatus.ACTIVE;
-        this.vehicle.activateRental(); // Transition vehicle state
+        this.vehicle.activateRental();
         Logger.info(`Contract ${this.contractId} activated.`, { contractId: this.contractId });
     }
 
@@ -91,12 +94,10 @@ export class RentalContract {
         }
         this.actualReturnDate = returnDate;
         this.status = ContractStatus.COMPLETED;
-        this.vehicle.returnVehicle(mileageAdded); // Transition vehicle state
+        this.vehicle.returnVehicle(mileageAdded);
 
-        // Recalculate based on actual return date (simple logic for now)
         this.totalAmount = this.pricingStrategy.calculatePrice(this) + this.insuranceTotal;
 
-        // Add loyalty points (1 point per $10 spent)
         const pointsEarned = Math.floor(this.totalAmount / 10);
         this.customer.addLoyaltyPoints(pointsEarned);
 

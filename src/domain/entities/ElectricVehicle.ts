@@ -16,9 +16,11 @@ export class ElectricVehicle extends Vehicle {
         batteryCapacityKwh: number,
         rangeKm: number,
         chargerType: string,
-        initialMileage: number = 0
+        initialMileage: number = 0,
+        vehicleId?: string,
+        initialState?: any
     ) {
-        super(make, model, year, licensePlate, dailyRate, 'HQ', initialMileage);
+        super(make, model, year, licensePlate, dailyRate, 'HQ', initialMileage, vehicleId, initialState);
         this.batteryCapacityKwh = batteryCapacityKwh;
         this.rangeKm = rangeKm;
         this.chargerType = chargerType;

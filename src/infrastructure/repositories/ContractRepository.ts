@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { RentalContract } from '../../domain/entities/RentalContract';
 import { PrismaService } from '../PrismaService';
+import { ContractMapper } from '../mappers/ContractMapper';
 
 export class ContractRepository {
     private prisma: PrismaClient;
@@ -31,6 +32,7 @@ export class ContractRepository {
                 where: {
                     vehicleId: data.vehicleId,
                     status: { in: ['CONFIRMED', 'ACTIVE'] },
+                    NOT: { contractId: data.contractId }, // Ignore current contract if updating
                     OR: [
                         {
                             startDate: { lte: data.endDate },
@@ -52,5 +54,33 @@ export class ContractRepository {
                 create: data
             });
         });
+    }
+
+    async findById(id: string): Promise<RentalContract | null> {
+        const contract = await this.prisma.rentalContract.findUnique({
+            where: { contractId: id },
+            include: {
+                customer: true,
+                vehicle: true,
+                insurancePolicy: true
+            }
+        });
+
+        if (!contract) return null;
+        return ContractMapper.toDomain(contract as any);
+    }
+
+    async findAllWithStatus(status: string): Promise<RentalContract[]> {
+        const contracts = await this.prisma.rentalContract.findMany({
+            where: { status },
+            include: {
+                customer: true,
+                vehicle: true,
+                insurancePolicy: true
+            },
+            orderBy: { startDate: 'asc' }
+        });
+
+        return contracts.map(c => ContractMapper.toDomain(c as any));
     }
 }

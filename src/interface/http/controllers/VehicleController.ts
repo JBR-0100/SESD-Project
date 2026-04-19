@@ -3,6 +3,8 @@ import { VehicleRepository } from '../../../infrastructure/repositories/VehicleR
 import { MaintenanceService } from '../../../application/services/MaintenanceService';
 import { runMaintenanceCheckNow } from '../../../infrastructure/scheduler/MaintenanceCron';
 import { Logger } from '../../../infrastructure/Logger';
+import { VehicleFactory } from '../../../domain/factories/VehicleFactory';
+import { VehicleType } from '../../../domain/types/enums';
 
 export class VehicleController {
     private vehicleRepo: VehicleRepository;
@@ -123,6 +125,94 @@ export class VehicleController {
                 flaggedCount: flagged,
             });
         } catch (error) {
+            next(error);
+        }
+    };
+
+    // POST /vehicles — create a new vehicle
+    createVehicle = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { type, dailyRate, mileageKm, ...data } = req.body;
+            if (!type) return res.status(400).json({ error: 'Vehicle type is required' });
+
+            // Validation
+            if (dailyRate !== undefined && Number(dailyRate) < 0) {
+                return res.status(400).json({ error: 'Daily rate cannot be negative' });
+            }
+            if (mileageKm !== undefined && Number(mileageKm) < 0) {
+                return res.status(400).json({ error: 'Initial mileage cannot be negative' });
+            }
+
+            const vehicleType = type as VehicleType;
+            const vehicle = VehicleFactory.createVehicle(vehicleType, { ...data, dailyRate, mileageKm });
+            
+            await this.vehicleRepo.save(vehicle);
+            
+            Logger.info(`New vehicle created: ${vehicle.getVehicleId()}`, { type, make: data.make, model: data.model });
+            res.status(201).json({ 
+                status: 'success', 
+                data: {
+                    id: vehicle.getVehicleId(),
+                    make: vehicle.getMake(),
+                    model: vehicle.getModel(),
+                    type: vehicle.getVehicleType(),
+                    state: vehicle.getState().getStateName()
+                }
+            });
+        } catch (error: any) {
+            res.status(400).json({ error: error.message || 'Failed to create vehicle' });
+        }
+    };
+
+    // PATCH /vehicles/:id — update vehicle details
+    updateVehicle = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const id = req.params.id as string;
+            const updates = req.body;
+            if (!id) return res.status(400).json({ error: 'Vehicle ID is required' });
+
+            // Validation
+            if (updates.dailyRate !== undefined && Number(updates.dailyRate) < 0) {
+                return res.status(400).json({ error: 'Daily rate cannot be negative' });
+            }
+            if (updates.mileageKm !== undefined && Number(updates.mileageKm) < 0) {
+                return res.status(400).json({ error: 'Mileage cannot be negative' });
+            }
+
+            const vehicle = await this.vehicleRepo.findById(id);
+            if (!vehicle) return res.status(404).json({ error: 'Vehicle not found' });
+
+            // Apply updates to the domain entity
+            Object.assign(vehicle, {
+                ...updates,
+                dailyRate: updates.dailyRate !== undefined ? Number(updates.dailyRate) : (vehicle as any).dailyRate,
+                mileageKm: updates.mileageKm !== undefined ? Number(updates.mileageKm) : (vehicle as any).mileageKm,
+            });
+
+            await this.vehicleRepo.save(vehicle);
+            
+            Logger.info(`Vehicle updated: ${id}`, { updates });
+            res.status(200).json({ status: 'success', data: { id: vehicle.getVehicleId(), make: vehicle.getMake(), model: vehicle.getModel() } });
+        } catch (error: any) {
+            next(error);
+        }
+    };
+
+    // PATCH /vehicles/:id/retire — decommission a vehicle
+    retireVehicle = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const id = req.params.id as string;
+            if (!id) return res.status(400).json({ error: 'Vehicle ID is required' });
+
+            const vehicle = await this.vehicleRepo.findById(id);
+            if (!vehicle) return res.status(404).json({ error: 'Vehicle not found' });
+
+            vehicle.retire(); // Transition to RETIRED state
+            await this.vehicleRepo.save(vehicle);
+            
+            Logger.info(`Vehicle retired: ${id}`, { vehicleId: id });
+            res.status(200).json({ status: 'success', message: 'Vehicle decommissioned', state: 'RETIRED' });
+        } catch (error: any) {
             next(error);
         }
     };

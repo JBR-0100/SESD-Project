@@ -22,9 +22,11 @@ export abstract class Vehicle {
         licensePlate: string,
         dailyRate: number,
         location: string = 'HQ',
-        initialMileage: number = 0
+        initialMileage: number = 0,
+        vehicleId?: string,
+        initialState?: VehicleState
     ) {
-        this.vehicleId = uuidv4();
+        this.vehicleId = vehicleId || uuidv4();
         this.make = make;
         this.model = model;
         this.year = year;
@@ -32,7 +34,7 @@ export abstract class Vehicle {
         this.dailyRate = dailyRate;
         this.location = location;
         this.mileageKm = initialMileage;
-        this.state = new AvailableState(); // Default state
+        this.state = initialState || new AvailableState(); // Default state
     }
 
     // Getters

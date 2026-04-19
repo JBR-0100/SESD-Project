@@ -3,19 +3,30 @@ import { useAuth } from '../AuthContext';
 import api from '../api';
 import {
     Car, LayoutDashboard, Wrench, LogOut, Shield, User,
-    RefreshCw, ChevronRight,
+    RefreshCw, ChevronRight, Plus, Users,
 } from 'lucide-react';
 
 interface SidebarProps {
     onMaintenanceCheck: () => void;
     onRefresh: () => void;
+    onAddVehicle: () => void;
+    currentView: 'fleet' | 'reserved' | 'customers';
+    onViewChange: (view: 'fleet' | 'reserved' | 'customers') => void;
     theme?: 'dark' | 'light';
 }
 
-export default function Sidebar({ onMaintenanceCheck, onRefresh, theme = 'dark' }: SidebarProps) {
+export default function Sidebar({ 
+    onMaintenanceCheck, 
+    onRefresh, 
+    onAddVehicle, 
+    currentView, 
+    onViewChange, 
+    theme = 'dark' 
+}: SidebarProps) {
     const { user, logout, isFleetManager } = useAuth();
     const [checkLoading, setCheckLoading] = useState(false);
     const [checkResult, setCheckResult] = useState<string | null>(null);
+
     const handleMaintenanceCheck = async () => {
         setCheckLoading(true);
         setCheckResult(null);
@@ -54,19 +65,59 @@ export default function Sidebar({ onMaintenanceCheck, onRefresh, theme = 'dark' 
             <nav className="flex-1 px-3 py-4 space-y-1">
                 <div className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Navigation</div>
 
-                <button className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl border text-sm font-medium ${
-                    isDark ? 'text-white bg-brand-600/15 border-brand-500/20' : 'text-brand-700 bg-brand-50 border-brand-100'
+                <button 
+                    onClick={() => onViewChange('fleet')}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+                        currentView === 'fleet'
+                            ? (isDark ? 'text-white bg-brand-600/15 border-brand-500/20' : 'text-brand-700 bg-brand-50 border-brand-100')
+                            : (isDark ? 'text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-800/40' : 'text-slate-500 border-transparent hover:text-slate-900 hover:bg-slate-50')
                 }`}>
-                    <LayoutDashboard className={`w-4 h-4 ${isDark ? 'text-brand-400' : 'text-brand-600'}`} />
+                    <LayoutDashboard className={`w-4 h-4 ${currentView === 'fleet' ? (isDark ? 'text-brand-400' : 'text-brand-600') : 'text-slate-500'}`} />
                     Fleet Overview
-                    <ChevronRight className="w-3.5 h-3.5 ml-auto opacity-50" />
+                    {currentView === 'fleet' && <ChevronRight className="w-3.5 h-3.5 ml-auto opacity-50" />}
                 </button>
+
+                {isFleetManager && (
+                    <button 
+                        onClick={() => onViewChange('reserved')}
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+                            currentView === 'reserved'
+                                ? (isDark ? 'text-white bg-brand-600/15 border-brand-500/20' : 'text-brand-700 bg-brand-50 border-brand-100')
+                                : (isDark ? 'text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-800/40' : 'text-slate-500 border-transparent hover:text-slate-900 hover:bg-slate-50')
+                    }`}>
+                        <Shield className={`w-4 h-4 ${currentView === 'reserved' ? (isDark ? 'text-brand-400' : 'text-brand-600') : 'text-slate-500'}`} />
+                        Reserved Section
+                        {currentView === 'reserved' && <ChevronRight className="w-3.5 h-3.5 ml-auto opacity-50" />}
+                    </button>
+                )}
+
+                {isFleetManager && (
+                    <button 
+                        onClick={() => onViewChange('customers')}
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+                            currentView === 'customers'
+                                ? (isDark ? 'text-white bg-brand-600/15 border-brand-500/20' : 'text-brand-700 bg-brand-50 border-brand-100')
+                                : (isDark ? 'text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-800/40' : 'text-slate-500 border-transparent hover:text-slate-900 hover:bg-slate-50')
+                    }`}>
+                        <Users className={`w-4 h-4 ${currentView === 'customers' ? (isDark ? 'text-brand-400' : 'text-brand-600') : 'text-slate-500'}`} />
+                        Customer Directory
+                        {currentView === 'customers' && <ChevronRight className="w-3.5 h-3.5 ml-auto opacity-50" />}
+                    </button>
+                )}
 
                 {isFleetManager && (
                     <>
                         <div className="px-3 pt-6 pb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                             Fleet Manager
                         </div>
+
+                        <button onClick={onAddVehicle}
+                            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition text-sm group ${
+                                isDark ? 'text-emerald-400 bg-emerald-950/20 border border-emerald-900/30 hover:bg-emerald-900/40' : 'text-emerald-700 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100'
+                            }`}>
+                            <Plus className="w-4 h-4" />
+                            Add New Vehicle
+                        </button>
 
                         <button onClick={handleMaintenanceCheck} disabled={checkLoading}
                             className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition text-sm group ${

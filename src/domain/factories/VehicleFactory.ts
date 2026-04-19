@@ -5,9 +5,7 @@ import { Vehicle } from '../entities/Vehicle';
 import { VehicleType } from '../types/enums';
 
 export class VehicleFactory {
-    static createVehicle(type: VehicleType, data: any): Vehicle {
-        // Explicitly extract and cast each property before passing to constructor
-        // This avoids complex inline casting that might confuse the compiler
+    static createVehicle(type: VehicleType, data: any, vehicleId?: string, initialState?: any): Vehicle {
         const make = String(data.make);
         const model = String(data.model);
         const year = Number(data.year);
@@ -22,11 +20,10 @@ export class VehicleFactory {
                 const fuelType = String(data.fuelType || 'Petrol') as 'Petrol' | 'Diesel' | 'Hybrid';
                 const seatingCapacity = Number(data.seatingCapacity || 5);
 
-                // @ts-ignore
                 return new Car(
                     make, model, year, licensePlate, dailyRate,
                     numDoors, transmission, fuelType, seatingCapacity,
-                    initialMileage
+                    initialMileage, vehicleId, initialState
                 );
             }
             case VehicleType.TRUCK: {
@@ -37,7 +34,7 @@ export class VehicleFactory {
                 return new Truck(
                     make, model, year, licensePlate, dailyRate,
                     payload, truckClass, refrigeration,
-                    initialMileage
+                    initialMileage, vehicleId, initialState
                 );
             }
             case VehicleType.ELECTRIC_VEHICLE: {
@@ -48,7 +45,7 @@ export class VehicleFactory {
                 return new ElectricVehicle(
                     make, model, year, licensePlate, dailyRate,
                     capacity, range, charger,
-                    initialMileage
+                    initialMileage, vehicleId, initialState
                 );
             }
             default:

@@ -14,10 +14,10 @@ export class CustomerRepository {
         await this.prisma.customer.upsert({
             where: { customerId: customer.getCustomerId() },
             update: {
-                firstName: customer.getName().split(' ')[0], // Simplification for demo
+                firstName: customer.getName().split(' ')[0], 
                 lastName: customer.getName().split(' ')[1] || '',
                 email: customer.getEmail(),
-                phone: '555-0000', // Placeholder as domain entity might not expose everything yet
+                phone: '555-0000', 
                 loyaltyTier: customer.getLoyaltyTier(),
                 isBlacklisted: customer.isBlocked(),
                 passwordHash: customer.getPasswordHash(),
@@ -34,7 +34,6 @@ export class CustomerRepository {
             }
         });
 
-        // Observer Pattern: Publish domain event (triggers welcome email job)
         EventBus.publish(DomainEvents.CUSTOMER_CREATED, {
             customerId: customer.getCustomerId(),
             email: customer.getEmail(),
@@ -62,5 +61,21 @@ export class CustomerRepository {
             customerData.passwordHash,
             customerData.role
         );
+    }
+
+    async findAll(): Promise<Customer[]> {
+        const customersData = await this.prisma.customer.findMany();
+        return customersData.map(c => Customer.restore(
+            c.customerId,
+            c.firstName,
+            c.lastName,
+            c.email,
+            c.phone,
+            c.loyaltyTier as any,
+            c.loyaltyPoints,
+            c.isBlacklisted,
+            c.passwordHash,
+            c.role
+        ));
     }
 }

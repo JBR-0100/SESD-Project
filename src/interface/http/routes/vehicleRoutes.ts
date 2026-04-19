@@ -11,6 +11,9 @@ const controller = new VehicleController();
 // GET /vehicles — all vehicles (authenticated)
 router.get('/', authMiddleware, controller.getAllVehicles);
 
+// POST / — create new vehicle (Fleet Manager only)
+router.post('/', authMiddleware, roleMiddleware('FLEET_MANAGER'), controller.createVehicle);
+
 // GET /vehicles/available — available by date (public)
 router.get(
     '/available',
@@ -33,6 +36,22 @@ router.post(
     authMiddleware,
     roleMiddleware('FLEET_MANAGER'),
     controller.returnVehicle
+);
+
+// PATCH /vehicles/:id — update vehicle details (Fleet Manager only)
+router.patch(
+    '/:id',
+    authMiddleware,
+    roleMiddleware('FLEET_MANAGER'),
+    controller.updateVehicle
+);
+
+// PATCH /vehicles/:id/retire — decommission a vehicle (Fleet Manager only)
+router.patch(
+    '/:id/retire',
+    authMiddleware,
+    roleMiddleware('FLEET_MANAGER'),
+    controller.retireVehicle
 );
 
 // POST /maintenance/check — trigger maintenance check (Fleet Manager only)

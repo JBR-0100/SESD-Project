@@ -17,9 +17,11 @@ export class Car extends Vehicle {
         transmission: 'Manual' | 'Automatic',
         fuelType: 'Petrol' | 'Diesel' | 'Hybrid',
         seatingCapacity: number,
-        initialMileage: number = 0
+        initialMileage: number = 0,
+        vehicleId?: string,
+        initialState?: any // Use any to avoid circular dependency if needed, but VehicleState is preferred
     ) {
-        super(make, model, year, licensePlate, dailyRate, 'HQ', initialMileage);
+        super(make, model, year, licensePlate, dailyRate, 'HQ', initialMileage, vehicleId, initialState);
         this.numDoors = numDoors;
         this.transmission = transmission;
         this.fuelType = fuelType;

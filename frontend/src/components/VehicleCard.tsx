@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '../AuthContext';
 import api from '../api';
-import { Car, Zap, Truck, Wrench, RotateCcw, ArrowUpRight, Gauge, Calendar } from 'lucide-react';
+import { Car, Zap, Truck, Wrench, RotateCcw, ArrowUpRight, Gauge, Calendar, Edit3, Archive, Loader2 } from 'lucide-react';
 
 export interface VehicleData {
     id: string;
@@ -19,7 +19,15 @@ interface VehicleCardProps {
     vehicle: VehicleData;
     onRefresh: () => void;
     onBook: (vehicle: VehicleData) => void;
+    onEdit?: (vehicle: VehicleData) => void;
+    onRetire?: (vehicle: VehicleData) => void;
     theme?: 'dark' | 'light';
+    reservation?: {
+        customer: string;
+        startDate: string;
+        endDate: string;
+        total: number;
+    };
 }
 
 const stateConfig: Record<string, { color: string; bg: string; border: string; dot: string; label: string }> = {
@@ -50,7 +58,7 @@ const typeLabels: Record<string, string> = {
     TRUCK: 'Truck',
 };
 
-export default function VehicleCard({ vehicle, onRefresh, onBook, theme = 'dark' }: VehicleCardProps) {
+export default function VehicleCard({ vehicle, onRefresh, onBook, onEdit, onRetire, theme = 'dark', reservation }: VehicleCardProps) {
     const { isFleetManager } = useAuth();
     const isDark = theme === 'dark';
     const state = (isDark ? stateConfig : lightStateConfig)[vehicle.state] || stateConfig.AVAILABLE;
@@ -65,6 +73,9 @@ export default function VehicleCard({ vehicle, onRefresh, onBook, theme = 'dark'
                 await api.patch(`/vehicles/${vehicle.id}/status`, { status: 'AVAILABLE' });
             } else if (action === 'return') {
                 await api.post(`/vehicles/${vehicle.id}/return`, { mileageAdded: Math.floor(Math.random() * 500) + 100 });
+            } else if (action === 'retire') {
+                await api.patch(`/vehicles/${vehicle.id}/retire`);
+                if (onRetire) onRetire(vehicle);
             }
             onRefresh();
         } catch (err: any) {
@@ -126,40 +137,92 @@ export default function VehicleCard({ vehicle, onRefresh, onBook, theme = 'dark'
                 </div>
             </div>
 
-            {/* Actions */}
+            {/* Actions or Reservation Info */}
             <div className={`mt-auto pt-4 border-t flex gap-2 flex-wrap ${isDark ? 'border-slate-800/50' : 'border-slate-100'}`}>
-                {vehicle.state === 'AVAILABLE' && (
-                    <button onClick={() => onBook(vehicle)}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-sm font-medium transition shadow-lg shadow-brand-500/20 active:scale-95">
-                        <ArrowUpRight className="w-3.5 h-3.5" /> Book Now
-                    </button>
-                )}
+                {reservation ? (
+                    <div className="w-full space-y-3">
+                        <div className="flex items-center justify-between pb-2 border-b border-slate-800/30">
+                            <div className="flex flex-col">
+                                <span className={`text-[10px] uppercase font-bold tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Reserved By</span>
+                                <span className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{reservation.customer}</span>
+                            </div>
+                            <div className="text-right">
+                                <span className={`text-[10px] uppercase font-bold tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Total</span>
+                                <p className="text-brand-400 font-bold text-sm">₹{reservation.total.toLocaleString()}</p>
+                            </div>
+                        </div>
+                        
+                        <div className={`flex items-center justify-between p-3 rounded-xl ${isDark ? 'bg-slate-800/50' : 'bg-slate-50 border border-slate-100 shadow-sm'}`}>
+                            <div className="flex flex-col">
+                                <span className="text-[10px] text-slate-500 uppercase font-bold">Duration</span>
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                    <Calendar className="w-3.5 h-3.5 text-brand-400" />
+                                    <span className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                                        {Math.ceil((new Date(reservation.endDate).getTime() - new Date(reservation.startDate).getTime()) / (1000 * 60 * 60 * 24))} Days
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="flex flex-col items-end">
+                                <span className="text-[10px] text-slate-500 uppercase font-bold">Dates</span>
+                                <span className={`text-[10px] font-bold mt-1 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                                    {new Date(reservation.startDate).toLocaleDateString()} — {new Date(reservation.endDate).toLocaleDateString()}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <>
+                        {vehicle.state === 'AVAILABLE' && (
+                            <button onClick={() => onBook(vehicle)}
+                                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-sm font-medium transition shadow-lg shadow-brand-500/20 active:scale-95">
+                                <ArrowUpRight className="w-3.5 h-3.5" /> Book Now
+                            </button>
+                        )}
 
-                {isFleetManager && vehicle.state === 'AVAILABLE' && (
-                    <button onClick={() => handleAction('maintenance')} disabled={loading === 'maintenance'}
-                        className={`flex items-center justify-center gap-1.5 px-3 py-2.5 border rounded-xl text-sm font-medium transition disabled:opacity-50 ${
-                            isDark ? 'bg-amber-600/20 text-amber-400 border-amber-700/40 hover:bg-amber-600/30' : 'bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-100'
-                        }`}>
-                        <Wrench className={`w-3.5 h-3.5 ${loading === 'maintenance' ? 'animate-spin' : ''}`} />
-                    </button>
-                )}
+                        {isFleetManager && vehicle.state === 'AVAILABLE' && (
+                            <button onClick={() => handleAction('maintenance')} disabled={loading === 'maintenance'}
+                                className={`flex items-center justify-center gap-1.5 px-3 py-2.5 border rounded-xl text-sm font-medium transition disabled:opacity-50 ${
+                                    isDark ? 'bg-amber-600/20 text-amber-400 border-amber-700/40 hover:bg-amber-600/30' : 'bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-100'
+                                }`}>
+                                <Wrench className={`w-3.5 h-3.5 ${loading === 'maintenance' ? 'animate-spin' : ''}`} />
+                            </button>
+                        )}
 
-                {isFleetManager && vehicle.state === 'RENTED' && (
-                    <button onClick={() => handleAction('return')} disabled={loading === 'return'}
-                        className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 border rounded-xl text-sm font-medium transition disabled:opacity-50 ${
-                            isDark ? 'bg-blue-600/20 text-blue-400 border-blue-700/40 hover:bg-blue-600/30' : 'bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100'
-                        }`}>
-                        <RotateCcw className={`w-3.5 h-3.5 ${loading === 'return' ? 'animate-spin' : ''}`} /> Return
-                    </button>
-                )}
+                        {isFleetManager && vehicle.state === 'RENTED' && (
+                            <button onClick={() => handleAction('return')} disabled={loading === 'return'}
+                                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 border rounded-xl text-sm font-medium transition disabled:opacity-50 ${
+                                    isDark ? 'bg-blue-600/20 text-blue-400 border-blue-700/40 hover:bg-blue-600/30' : 'bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100'
+                                }`}>
+                                <RotateCcw className={`w-3.5 h-3.5 ${loading === 'return' ? 'animate-spin' : ''}`} /> Return
+                            </button>
+                        )}
 
-                {isFleetManager && vehicle.state === 'MAINTENANCE' && (
-                    <button onClick={() => handleAction('release')} disabled={loading === 'release'}
-                        className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 border rounded-xl text-sm font-medium transition disabled:opacity-50 ${
-                            isDark ? 'bg-emerald-600/20 text-emerald-400 border-emerald-700/40 hover:bg-emerald-600/30' : 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100'
-                        }`}>
-                        <RotateCcw className={`w-3.5 h-3.5 ${loading === 'release' ? 'animate-spin' : ''}`} /> Release
-                    </button>
+                        {isFleetManager && vehicle.state === 'MAINTENANCE' && (
+                            <button onClick={() => handleAction('release')} disabled={loading === 'release'}
+                                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 border rounded-xl text-sm font-medium transition disabled:opacity-50 ${
+                                    isDark ? 'bg-emerald-600/20 text-emerald-400 border-emerald-700/40 hover:bg-emerald-600/30' : 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100'
+                                }`}>
+                                <RotateCcw className={`w-3.5 h-3.5 ${loading === 'release' ? 'animate-spin' : ''}`} /> Release
+                            </button>
+                        )}
+
+                        {isFleetManager && vehicle.state !== 'RETIRED' && (
+                            <div className="flex gap-2 w-full mt-2 pt-2 border-t border-slate-800/30">
+                                <button onClick={() => onEdit?.(vehicle)}
+                                    className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 border rounded-xl text-xs font-bold transition ${
+                                        isDark ? 'bg-slate-800/40 text-slate-300 border-slate-700/50 hover:bg-slate-800' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                                    }`}>
+                                    <Edit3 className="w-3.5 h-3.5" /> Edit
+                                </button>
+                                <button onClick={() => handleAction('retire')} disabled={loading === 'retire'}
+                                    className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 border rounded-xl text-xs font-bold transition ${
+                                        isDark ? 'bg-red-950/20 text-red-400 border-red-900/30 hover:bg-red-950/40' : 'bg-red-50 text-red-600 border-red-100 hover:bg-red-100'
+                                    }`}>
+                                    {loading === 'retire' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Archive className="w-3.5 h-3.5" />} Retire
+                                </button>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
         </div>
